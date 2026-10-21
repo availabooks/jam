@@ -2,6 +2,8 @@ name: Verify registry changes
 
 # Runs on every pull request. The check reads only the registry and public source repositories, so it
 # needs no secrets; GITHUB_TOKEN (read-only here) just raises the GitHub API rate limit.
+# The checker and maintainers.json are taken from the base branch, not the pull request, so a pull
+# request can't change the rules it is checked against.
 on:
   pull_request:
     branches: [main]
@@ -20,6 +22,10 @@ jobs:
         with:
           node-version: 22
       - name: Check entries and bundles
-        run: node tools/verify.mjs --registry . --base "origin/${{ github.base_ref }}" --author "${{ github.event.pull_request.user.login }}" --association "${{ github.event.pull_request.author_association }}"
+        run: |
+          git show "origin/$BASE:tools/verify.mjs" > "$RUNNER_TEMP/verify.mjs"
+          node "$RUNNER_TEMP/verify.mjs" --registry . --base "origin/$BASE" --author "$AUTHOR"
         env:
+          BASE: ${{ github.base_ref }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
           GITHUB_TOKEN: ${{ github.token }}

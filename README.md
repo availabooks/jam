@@ -47,7 +47,10 @@ An entry looks like this:
 
 - **Append-only.** Existing entries and bundles can't be edited or deleted. The one allowed change is adding `"yanked": true`, which marks a version "don't install" while keeping it visible.
 - **Rebuilt from source.** The check clones `repo` at `commit`, which must be a full SHA, not a branch or tag. It bundles `path` and requires the entry's fingerprint and the submitted bundle to match.
-- **Ownership.** The namespace (`<owner>` in the id) must be the GitHub owner of the source repository. The pull request must come from that user, or from a public member of that organization. `jolt` is reserved for `availabooks`.
+- **Ownership.** The namespace (`<owner>` in the id) must be the GitHub owner of the source repository, and `jolt` is reserved for `availabooks`. The pull request must come from one of:
+  - that user
+  - a public member of that organization
+  - someone listed for the organization in `maintainers.json`. This is how private members publish. Changes to the list need a maintainer's review, and the check reads it from `main`.
 - **Readable, self-contained code.** Minified files are rejected, and so are missing publish fields. Installed apps can't load remote code at all.
 - **Tips go to the developer.** Every `funding` link must appear in the source repository's `FUNDING.yml`.
 

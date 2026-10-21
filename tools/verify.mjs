@@ -130,7 +130,17 @@ async function readProject(root) {
 // scripts/jam/verify.js
 var run = promisify(execFile);
 var RESERVED = { jolt: "availabooks" };
-var REGISTRY_OWNER = "availabooks";
+var MAINTAINERS_FILE = "maintainers.json";
+function parseMaintainers(text) {
+  try {
+    const raw = JSON.parse(text ?? "{}");
+    return Object.fromEntries(
+      Object.entries(raw).map(([org, logins]) => [org.toLowerCase(), Array.isArray(logins) ? logins.map((l) => String(l).toLowerCase()) : []])
+    );
+  } catch {
+    return {};
+  }
+}
 var ENTRY_PATH = /^apps\/([a-z0-9-]+)\/([a-z0-9-]+)\/([^/]+)\.json$/;
 var BLOB_PATH = /^blobs\/([0-9a-f]{64})\.json$/;
 var ENTRY_KEYS = /* @__PURE__ */ new Set(["id", "version", "sha256", "repo", "path", "commit", "publishedAt", "yanked"]);
@@ -179,7 +189,7 @@ function checkOwnership(entry, author, authorInOrg) {
   );
   const problems = [];
   if (repoOwner !== expected) problems.push(`${entry.id}: apps in the "${namespace}" namespace must come from a repository owned by ${expected} (got ${entry.repo}).`);
-  if (author.toLowerCase() !== expected && !authorInOrg) problems.push(`${entry.id}: only ${expected} (or a public member of that organization) can publish in "${namespace}". The pull request is from ${author}.`);
+  if (author.toLowerCase() !== expected && !authorInOrg) problems.push(`${entry.id}: only ${expected}, its public members, or people listed for it in maintainers.json can publish in "${namespace}". The pull request is from ${author}.`);
   return problems;
 }
 function checkFunding(funding, fundingYml) {
@@ -245,11 +255,11 @@ async function main(argv) {
   const registry = resolve(arg(argv, "registry") ?? ".");
   const base = arg(argv, "base") ?? "origin/main";
   const author = arg(argv, "author") ?? process.env.PR_AUTHOR ?? "";
-  const association = (arg(argv, "association") ?? "").toUpperCase();
-  const inOrg = async (org) => org === REGISTRY_OWNER && (association === "OWNER" || association === "MEMBER") || await isPublicMember(org, author);
   const git = async (...a) => (await run("git", a, { cwd: registry, maxBuffer: 64 * 1024 * 1024 })).stdout;
   const show = (rev, path) => git("show", `${rev}:${path}`).catch(() => void 0);
   const mergeBase = (await git("merge-base", base, "HEAD")).trim();
+  const maintainers = parseMaintainers(await show(mergeBase, MAINTAINERS_FILE));
+  const inOrg = async (org) => (maintainers[org.toLowerCase()] ?? []).includes(author.toLowerCase()) || await isPublicMember(org, author);
   const changes = await Promise.all(
     (await git("diff", "--name-status", "--no-renames", mergeBase, "HEAD")).split("\n").filter(Boolean).map(async (line) => {
       const [status, path] = line.split("	");
@@ -319,6 +329,7 @@ async function isPublicMember(org, user) {
 }
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main(process.argv.slice(2)).then((code) => process.exit(code));
 export {
+  MAINTAINERS_FILE,
   RESERVED,
   checkAppendOnly,
   checkEntry,
@@ -326,5 +337,6 @@ export {
   checkOwnership,
   checkRebuild,
   fundingUrls,
-  main
+  main,
+  parseMaintainers
 };

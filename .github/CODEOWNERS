@@ -2,4 +2,5 @@
 * @theGove
 /.github/ @theGove
 /tools/ @theGove
+/maintainers.json @theGove
 /apps/jolt/ @theGove
