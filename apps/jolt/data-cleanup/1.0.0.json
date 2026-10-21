@@ -1,0 +1,9 @@
+{
+  "id": "jolt/data-cleanup",
+  "version": "1.0.0",
+  "sha256": "013e5321b46d968773b90dabc249bc8182ff7d5cf2eccbac5e07926d1e1b1d60",
+  "repo": "availabooks/jolt-apps",
+  "path": "data-cleanup",
+  "commit": "017975316e5e4a8d4abd0c3427e5cbcb36b024d7",
+  "publishedAt": "2026-10-21T16:06:08.494Z"
+}
