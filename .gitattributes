@@ -1,0 +1,2 @@
+blobs/** -text
+*.json text eol=lf

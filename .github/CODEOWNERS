@@ -1,0 +1,5 @@
+# Changes to the check itself, the workflow and official apps need a maintainer.
+* @theGove
+/.github/ @theGove
+/tools/ @theGove
+/apps/jolt/ @theGove
