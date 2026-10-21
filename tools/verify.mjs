@@ -130,6 +130,7 @@ async function readProject(root) {
 // scripts/jam/verify.js
 var run = promisify(execFile);
 var RESERVED = { jolt: "availabooks" };
+var REGISTRY_OWNER = "availabooks";
 var ENTRY_PATH = /^apps\/([a-z0-9-]+)\/([a-z0-9-]+)\/([^/]+)\.json$/;
 var BLOB_PATH = /^blobs\/([0-9a-f]{64})\.json$/;
 var ENTRY_KEYS = /* @__PURE__ */ new Set(["id", "version", "sha256", "repo", "path", "commit", "publishedAt", "yanked"]);
@@ -244,6 +245,8 @@ async function main(argv) {
   const registry = resolve(arg(argv, "registry") ?? ".");
   const base = arg(argv, "base") ?? "origin/main";
   const author = arg(argv, "author") ?? process.env.PR_AUTHOR ?? "";
+  const association = (arg(argv, "association") ?? "").toUpperCase();
+  const inOrg = async (org) => org === REGISTRY_OWNER && (association === "OWNER" || association === "MEMBER") || await isPublicMember(org, author);
   const git = async (...a) => (await run("git", a, { cwd: registry, maxBuffer: 64 * 1024 * 1024 })).stdout;
   const show = (rev, path) => git("show", `${rev}:${path}`).catch(() => void 0);
   const mergeBase = (await git("merge-base", base, "HEAD")).trim();
@@ -270,7 +273,7 @@ async function main(argv) {
       /** @type {Record<string, string>} */
       RESERVED[entry.id.split("/")[0]] ?? entry.id.split("/")[0]
     );
-    problems.push(...checkOwnership(entry, author, author.toLowerCase() !== owner && await isPublicMember(owner, author)));
+    problems.push(...checkOwnership(entry, author, author.toLowerCase() !== owner && await inOrg(owner)));
     const checkout = await mkdtemp(join2(tmpdir(), "jam-"));
     try {
       await run("git", ["clone", "--quiet", "--filter=blob:none", "--no-checkout", `https://github.com/${entry.repo}.git`, checkout]);

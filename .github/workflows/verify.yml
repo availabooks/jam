@@ -20,6 +20,6 @@ jobs:
         with:
           node-version: 22
       - name: Check entries and bundles
-        run: node tools/verify.mjs --registry . --base "origin/${{ github.base_ref }}" --author "${{ github.event.pull_request.user.login }}"
+        run: node tools/verify.mjs --registry . --base "origin/${{ github.base_ref }}" --author "${{ github.event.pull_request.user.login }}" --association "${{ github.event.pull_request.author_association }}"
         env:
           GITHUB_TOKEN: ${{ github.token }}
