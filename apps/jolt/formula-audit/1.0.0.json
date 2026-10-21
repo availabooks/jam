@@ -1,0 +1,9 @@
+{
+  "id": "jolt/formula-audit",
+  "version": "1.0.0",
+  "sha256": "5e128356ee029ab16636183d9be4d8789dc4a469146b53ae234b3a2e59852d9f",
+  "repo": "availabooks/jolt-apps",
+  "path": "formula-audit",
+  "commit": "017975316e5e4a8d4abd0c3427e5cbcb36b024d7",
+  "publishedAt": "2026-10-21T16:06:09.410Z"
+}
