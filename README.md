@@ -56,6 +56,22 @@ An entry looks like this:
 
 Maintainers review every pull request before merging. A merged version appears on the JAM page, with its AI review page, when jolt.availabooks.com next deploys.
 
+## JOLT team reviews (the gold seal)
+
+A JOLT maintainer can mark a version as **Reviewed by the JOLT team** after reading its code with the same checklist the AI review uses. JET and the JAM page then show a gold seal for that version. Users still see the install screen and approve the app themselves.
+
+```
+reviews/<owner>/<app>/<version>.json
+{ "id": "jolt/data-cleanup", "version": "1.0.0", "sha256": "…", "reviewer": "theGove", "reviewedAt": "2026-10-21", "notes": "optional" }
+```
+
+To add one, run `node scripts/jam/review-version.js <this checkout> <owner/app> <version> [--notes "…"]` in the JOLT repository, then open a pull request. The check requires all of these:
+- `sha256` is that version's fingerprint
+- the pull request's author is the `reviewer`
+- the author is listed under `"_reviewers"` in `maintainers.json`, as read from `main`
+
+A review belongs to one version only: an update has no seal until it is reviewed too. A review can't be edited or deleted; to withdraw it, add `"revoked": true`.
+
 ## Yanking a version
 
 Open a pull request that adds `"yanked": true` to the entry. JET then refuses to run that version and offers the latest one that isn't yanked. Yanked versions are never deleted, so their review pages stay available.

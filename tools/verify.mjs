@@ -144,21 +144,47 @@ function parseMaintainers(text) {
 var ENTRY_PATH = /^apps\/([a-z0-9-]+)\/([a-z0-9-]+)\/([^/]+)\.json$/;
 var BLOB_PATH = /^blobs\/([0-9a-f]{64})\.json$/;
 var ENTRY_KEYS = /* @__PURE__ */ new Set(["id", "version", "sha256", "repo", "path", "commit", "publishedAt", "yanked"]);
+var REVIEW_PATH = /^reviews\/([a-z0-9-]+)\/([a-z0-9-]+)\/([^/]+)\.json$/;
+var REVIEW_KEYS = /* @__PURE__ */ new Set(["id", "version", "sha256", "reviewer", "reviewedAt", "notes", "revoked"]);
+var REVIEWERS_KEY = "_reviewers";
 function checkAppendOnly(changes) {
   const problems = [];
   for (const c of changes) {
-    const registryFile = ENTRY_PATH.test(c.path) || BLOB_PATH.test(c.path);
-    if (c.status === "A" || !registryFile) continue;
-    if (c.status === "M" && ENTRY_PATH.test(c.path) && c.before && c.after) {
+    const flag = ENTRY_PATH.test(c.path) ? "yanked" : REVIEW_PATH.test(c.path) ? "revoked" : BLOB_PATH.test(c.path) ? "" : null;
+    if (c.status === "A" || flag === null) continue;
+    if (c.status === "M" && flag && c.before && c.after) {
       try {
         const before = JSON.parse(c.before);
         const after = JSON.parse(c.after);
-        if (!before.yanked && after.yanked === true && canonicalJson({ ...after, yanked: void 0 }) === canonicalJson({ ...before, yanked: void 0 })) continue;
+        if (!before[flag] && after[flag] === true && canonicalJson({ ...after, [flag]: void 0 }) === canonicalJson({ ...before, [flag]: void 0 })) continue;
       } catch {
       }
     }
-    problems.push(`${c.path}: published versions can't be changed or removed (only "yanked": true may be added). Publish a new version instead.`);
+    problems.push(
+      flag === "revoked" ? `${c.path}: team reviews can't be changed or removed (only "revoked": true may be added).` : `${c.path}: published versions can't be changed or removed (only "yanked": true may be added). Publish a new version instead.`
+    );
   }
+  return problems;
+}
+function checkReview(path, raw, entry, author, reviewers) {
+  const m = REVIEW_PATH.exec(path);
+  if (!m) return [`${path}: team reviews go in reviews/<owner>/<app>/<version>.json.`];
+  if (!raw || typeof raw !== "object") return [`${path}: not a JSON object.`];
+  const r = (
+    /** @type {Record<string, unknown>} */
+    raw
+  );
+  const problems = [];
+  for (const k of Object.keys(r)) if (!REVIEW_KEYS.has(k)) problems.push(`${path}: unknown field "${k}".`);
+  if (r.id !== `${m[1]}/${m[2]}`) problems.push(`${path}: "id" must be "${m[1]}/${m[2]}".`);
+  if (r.version !== m[3]) problems.push(`${path}: "version" must be "${m[3]}".`);
+  if (!/^\d{4}-\d{2}-\d{2}/.test(String(r.reviewedAt))) problems.push(`${path}: "reviewedAt" must be a date such as 2026-10-21.`);
+  if (r.notes !== void 0 && (typeof r.notes !== "string" || r.notes.length > 500)) problems.push(`${path}: "notes" must be text of at most 500 characters.`);
+  if (r.revoked !== void 0) problems.push(`${path}: a new review can't start out revoked.`);
+  if (!entry) problems.push(`${path}: there is no published ${m[1]}/${m[2]} ${m[3]} to review.`);
+  else if (r.sha256 !== entry.sha256) problems.push(`${path}: "sha256" must be the version's fingerprint, ${entry.sha256}.`);
+  if (String(r.reviewer).toLowerCase() !== author.toLowerCase()) problems.push(`${path}: "reviewer" must be the pull request's author, ${author}.`);
+  if (!reviewers.includes(author.toLowerCase())) problems.push(`${path}: ${author} isn't a JOLT team reviewer (maintainers.json "${REVIEWERS_KEY}").`);
   return problems;
 }
 function checkEntry(path, raw) {
@@ -298,6 +324,24 @@ async function main(argv) {
       await rm(checkout, { recursive: true, force: true });
     }
   }
+  const reviewers = maintainers[REVIEWERS_KEY.toLowerCase()] ?? [];
+  const reviews = changes.filter((c) => c.status === "A" && REVIEW_PATH.test(c.path));
+  for (const c of reviews) {
+    let review;
+    try {
+      review = JSON.parse(c.after ?? "");
+    } catch {
+      problems.push(`${c.path}: not valid JSON.`);
+      continue;
+    }
+    const entryText = await show("HEAD", c.path.replace(/^reviews\//, "apps/"));
+    let entry = null;
+    try {
+      entry = entryText ? JSON.parse(entryText) : null;
+    } catch {
+    }
+    problems.push(...checkReview(c.path, review, entry, author, reviewers));
+  }
   for (const c of changes.filter((x) => x.status === "A" && BLOB_PATH.test(x.path))) {
     const sha = (
       /** @type {RegExpExecArray} */
@@ -314,7 +358,7 @@ async function main(argv) {
 - ${problems.join("\n- ")}`);
     return 1;
   }
-  console.log(`JAM registry check passed (${added.length} new version${added.length === 1 ? "" : "s"}).`);
+  console.log(`JAM registry check passed (${added.length} new version${added.length === 1 ? "" : "s"}, ${reviews.length} team review${reviews.length === 1 ? "" : "s"}).`);
   return 0;
 }
 async function isPublicMember(org, user) {
@@ -331,11 +375,13 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main(process.
 export {
   MAINTAINERS_FILE,
   RESERVED,
+  REVIEWERS_KEY,
   checkAppendOnly,
   checkEntry,
   checkFunding,
   checkOwnership,
   checkRebuild,
+  checkReview,
   fundingUrls,
   main,
   parseMaintainers
