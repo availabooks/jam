@@ -1,6 +1,6 @@
 # JAM: the JOLT Application Market
 
-This is the registry behind [JAM](https://jolt.availabooks.com/jam/): free apps for Excel, Word and PowerPoint, built with [JOLT](https://jolt.availabooks.com/). People install them in JET with a code such as `jam:jolt/data-cleanup`.
+This is the registry behind [JAM](https://jolt.technologylearningcompany.com/jam/): free apps for Excel, Word and PowerPoint, built with [JOLT](https://jolt.technologylearningcompany.com/). People install them in JET with a code such as `jam:jolt/data-cleanup`.
 
 Every version is identified by a **fingerprint**, the SHA-256 of its canonical bundle. JET runs a version only if the code it downloads has the fingerprint the user approved. So once a version is published here it can never change, wherever it is served from.
 
@@ -35,7 +35,7 @@ An entry looks like this:
    - `permissions`: `{ "hosts": [...], "network": [...] }`
    - optionally `funding`, tip links that are also listed in the repo's `.github/FUNDING.yml`
 
-   See [Publish your own app](https://jolt.availabooks.com/jam/#publish-your-own-app).
+   See [Publish your own app](https://jolt.technologylearningcompany.com/jam/#publish-your-own-app).
 3. Commit and push. In the app's folder, run:
    ```
    jolt jam release --registry <your clone of this repository>
@@ -54,7 +54,7 @@ An entry looks like this:
 - **Readable, self-contained code.** Minified files are rejected, and so are missing publish fields. Installed apps can't load remote code at all.
 - **Tips go to the developer.** Every `funding` link must appear in the source repository's `FUNDING.yml`.
 
-Maintainers review every pull request before merging. A merged version appears on the JAM page, with its AI review page, when jolt.availabooks.com next deploys.
+Maintainers review every pull request before merging. A merged version appears on the JAM page, with its AI review page, when jolt.technologylearningcompany.com next deploys.
 
 ## JOLT team reviews (the gold seal)
 
